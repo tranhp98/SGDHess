@@ -1,4 +1,5 @@
-
+import torch
+from torch.optim import Optimizer
 class SGDHess(Optimizer):
     r"""Implements stochastic gradient descent (optionally with momentum).
     Nesterov momentum is based on the formula from
