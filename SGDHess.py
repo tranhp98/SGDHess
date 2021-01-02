@@ -57,8 +57,7 @@ class SGDHess(Optimizer):
             group.setdefault('nesterov', False)
             for p in group['params']:
                 state = self.state[p]
-                state['prev_param'] = torch.zeros_like(p)
-                state['current_param'] = torch.zeros_like(p)
+                state['displacement'] = torch.zeros_like(p)
                 state['max_grad'] = torch.zeros_like(p)
 
     def step(self, closure=None):
@@ -83,32 +82,14 @@ class SGDHess(Optimizer):
             for p in group['params']:
                 if p.grad is None:
                     continue
-                state = self.state[p]
-                prev_param, current_param, max_grad = state['prev_param'], state['current_param'], state['max_grad']
-                with torch.no_grad():
-                    if(self.iteration == 0):
-                        prev_param.add_(p)
-                        d_p = p.grad
-                        if weight_decay != 0:
-                            d_p = d_p.add(p, alpha=weight_decay)
-                        if momentum != 0:
-                            if 'momentum_buffer' not in state:
-                                buf = state['momentum_buffer'] = torch.clone(d_p).detach()
-                            else:
-                                buf = state['momentum_buffer']
-                                buf.mul_(momentum).add_(d_p, alpha=1 - dampening)
-                            if nesterov:
-                                d_p = d_p.add(buf, alpha=momentum)
-                            else:
-                                d_p = buf
-                        max_grad.add_(d_p)
-                        p.add_(d_p, alpha=-group['lr'])
-                        current_param.copy_(p).detach()
-                    else:
-                        vector.append(current_param.add(prev_param, alpha = -1))
-                        grads.append(p.grad)
-                        param.append(p)
-            if(self.iteration > 0):
+                vector.append(self.state[p]['displacement'])
+                grads.append(p.grad)
+                param.append(p)
+
+            for p in group['params']:
+                if p.grad is None:
+                    continue
+                prev_param, max_grad = state['prev_param'], state['max_grad']
                 hvp = torch.autograd.grad(outputs = grads, inputs = param, grad_outputs=vector)
                 with torch.no_grad():
                     i = 0
@@ -116,9 +97,8 @@ class SGDHess(Optimizer):
                         if p.grad is None:
                             continue
                         state = self.state[p]
-                        prev_param, current_param, max_grad = state['prev_param'], state['current_param'], state['max_grad'] 
+                        displacement, max_grad = state['displacement'], state['max_grad'] 
                         with torch.no_grad():
-                            prev_param.copy_(current_param).detach()
                             d_p = p.grad
                             if weight_decay != 0:
                                 d_p = d_p.add(p, alpha=weight_decay)
@@ -141,8 +121,8 @@ class SGDHess(Optimizer):
                                     d_p = d_p.add(buf, alpha=momentum)
                                 else:
                                     d_p = buf
-                            p.add_(d_p, alpha=-group['lr'])
-                            current_param.copy_(p).detach()
+                            displacement.copy_(-d_p * group['lr'])
+                            p.add_(displacement)
                         i += 1
                             
         return loss
