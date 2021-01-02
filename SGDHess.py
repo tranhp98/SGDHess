@@ -131,15 +131,15 @@ class SGDHess(Optimizer):
                                     buf = state['momentum_buffer'] = torch.clone(d_p).detach()
                                 else:
                                     buf = state['momentum_buffer']
-                                    g = buf.add(hvp[i]).mul(momentum).add(d_p, alpha=1 - dampening)
+                                    buf.add_(hvp[i]).mul_(momentum).add_(d_p, alpha=1 - dampening)
                                     #g = buf.add(hvp[i]).mul(1-momentum).add(d_p, alpha=momentum)
                                     val = None
                                     if self.clip is not None:
                                         if self.clip == 'coord':
-                                            buf.copy_(torch.clamp(g, -max_grad, max_grad))
+                                            torch.clamp_(buf, -max_grad, max_grad)
                                             max_grad.copy_(torch.maximum(torch.abs(d_p), max_grad))
                                         if self.clip == 'norm':
-                                            torch.nn.utils.clip_grad_norm_(buf, max_grad)
+                                            torch.nn.utils.clip_grad_norm_(g, max_grad)
                                             max_grad.copy_(torch.maximum(torch.norm(d_p), max_grad))
                                     #buf.add_(hvp[i]).mul_(momentum).add_(d_p, alpha=1 - dampening)
                                 if nesterov:
