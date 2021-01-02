@@ -107,6 +107,7 @@ class SGDHess(Optimizer):
                             d_p = p.grad
                             if weight_decay != 0:
                                 d_p = d_p.add(p, alpha=weight_decay)
+                                hvp[i].add_(weight_decay * displacement)
                             if momentum != 0:
                                 if 'momentum_buffer' not in state:
                                     buf = state['momentum_buffer'] = torch.clone(d_p).detach()
