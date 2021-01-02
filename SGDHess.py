@@ -91,11 +91,11 @@ class SGDHess(Optimizer):
                 grads.append(p.grad)
                 param.append(p)
 
+            hvp = torch.autograd.grad(outputs = grads, inputs = param, grad_outputs=vector)
+
             for p in group['params']:
                 if p.grad is None:
                     continue
-                prev_param, max_grad = state['prev_param'], state['max_grad']
-                hvp = torch.autograd.grad(outputs = grads, inputs = param, grad_outputs=vector)
                 with torch.no_grad():
                     i = 0
                     for p in group['params']:
