@@ -40,13 +40,14 @@ class SGDHess(Optimizer):
     """
 
     def __init__(self, params, lr=1e-2, momentum=0, dampening=0,
-                 weight_decay=0, nesterov=False):
+                 weight_decay=0, nesterov=False, clip=None):
         if lr and lr < 0.0:
             raise ValueError("Invalid learning rate: {}".format(lr))
         if momentum < 0.0:
             raise ValueError("Invalid momentum value: {}".format(momentum))
         if weight_decay < 0.0:
             raise ValueError("Invalid weight_decay value: {}".format(weight_decay))
+        self.clip = clip
         self.iteration = -1
         defaults = dict(lr=lr, momentum=momentum, dampening=dampening,
                         weight_decay=weight_decay, nesterov=nesterov)
@@ -59,7 +60,10 @@ class SGDHess(Optimizer):
                 state = self.state[p]
                 state['prev_param'] = torch.zeros_like(p)
                 state['current_param'] = torch.zeros_like(p)
-                state['max_grad'] = torch.zeros_like(p)
+                if self.clip == 'coord':
+                    state['max_grad'] = torch.zeros_like(p)
+                if self.clip == 'norm':
+                    state['max_grad'] = torch.zeros(1)
 
     def step(self, closure=None):
         """Performs a single optimization step.
@@ -127,15 +131,16 @@ class SGDHess(Optimizer):
                                     buf = state['momentum_buffer'] = torch.clone(d_p).detach()
                                 else:
                                     buf = state['momentum_buffer']
-                                    g = buf.add(hvp[i]).mul(momentum).add(d_p, alpha=1 - dampening)
+                                    buf.add_(hvp[i]).mul_(momentum).add_(d_p, alpha=1 - dampening)
                                     #g = buf.add(hvp[i]).mul(1-momentum).add(d_p, alpha=momentum)
                                     val = None
-                                    if(torch.norm(g) > torch.norm(max_grad)):
-                                        val = max_grad*torch.div(g, torch.norm(g))
-                                        max_grad.add_(g-max_grad)
-                                    else:
-                                        val = g
-                                    buf.add_(val-buf)
+                                    if self.clip is not None:
+                                        if self.clip == 'coord':
+                                            torch.clamp_(buf, -max_grad, max_grad)
+                                            max_grad.copy_(torch.maximum(torch.abs(d_p), max_grad))
+                                        if self.clip == 'norm':
+                                            torch.nn.utils.clip_grad_norm_(g, max_grad)
+                                            max_grad.copy_(torch.maximum(torch.norm(d_p), max_grad))
                                     #buf.add_(hvp[i]).mul_(momentum).add_(d_p, alpha=1 - dampening)
                                 if nesterov:
                                     d_p = d_p.add(buf, alpha=momentum)
