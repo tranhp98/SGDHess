@@ -121,7 +121,7 @@ class SGDHess(Optimizer):
                                             torch.clamp_(buf, -max_grad, max_grad)
                                             max_grad.copy_(torch.maximum((1-dampening)/(1-momentum)*torch.abs(d_p), max_grad))
                                         if self.clip == 'norm':
-                                            torch.nn.utils.clip_grad_norm_(g, max_grad)
+                                            torch.nn.utils.clip_grad_norm_(buf, max_grad)
                                             max_grad.copy_(torch.maximum((1-dampening)/(1-momentum)*torch.norm(d_p), max_grad))
                                     #buf.add_(hvp[i]).mul_(momentum).add_(d_p, alpha=1 - dampening)
                                 if nesterov:
