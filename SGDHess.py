@@ -63,7 +63,7 @@ class SGDHess(Optimizer):
                 if self.clip == 'coord':
                     state['max_grad'] = torch.zeros_like(p)
                 if self.clip == 'norm':
-                    state['max_grad'] = torch.zeros(1)
+                    state['max_grad'] = torch.zeros(1, device=p.device)
 
     def step(self, closure=None):
         """Performs a single optimization step.
@@ -114,16 +114,13 @@ class SGDHess(Optimizer):
                                 else:
                                     buf = state['momentum_buffer']
                                     buf.add_(hvp[i]).mul_(momentum).add_(d_p, alpha=1 - dampening)
-                                    #g = buf.add(hvp[i]).mul(1-momentum).add(d_p, alpha=momentum)
-                                    val = None
                                     if self.clip is not None:
                                         if self.clip == 'coord':
-                                            torch.clamp_(buf, -max_grad, max_grad)
+                                            buf.copy_(torch.minimum(torch.maximum(buf, -max_grad), max_grad))
                                             max_grad.copy_(torch.maximum((1-dampening)/(1-momentum)*torch.abs(d_p), max_grad))
                                         if self.clip == 'norm':
                                             torch.nn.utils.clip_grad_norm_(buf, max_grad)
                                             max_grad.copy_(torch.maximum((1-dampening)/(1-momentum)*torch.norm(d_p), max_grad))
-                                    #buf.add_(hvp[i]).mul_(momentum).add_(d_p, alpha=1 - dampening)
                                 if nesterov:
                                     d_p = d_p.add(buf, alpha=momentum)
                                 else:
