@@ -1,5 +1,6 @@
 import torch
 from torch.optim import Optimizer
+
 class SGDHess(Optimizer):
     r"""Implements stochastic gradient descent (optionally with momentum).
     Nesterov momentum is based on the formula from
@@ -63,7 +64,7 @@ class SGDHess(Optimizer):
                 if self.clip == 'coord':
                     state['max_grad'] = torch.zeros_like(p)
                 if self.clip == 'norm':
-                    state['max_grad'] = torch.zeros(1, device=p.device)
+                    state['max_grad'] = torch.zeros(1)
 
     def step(self, closure=None):
         """Performs a single optimization step.
@@ -92,41 +93,36 @@ class SGDHess(Optimizer):
                 param.append(p)
 
             hvp = torch.autograd.grad(outputs = grads, inputs = param, grad_outputs=vector)
-
-            for p in group['params']:
-                if p.grad is None:
-                    continue
-                with torch.no_grad():
-                    i = 0
-                    for p in group['params']:
-                        if p.grad is None:
-                            continue
-                        state = self.state[p]
-                        displacement, max_grad = state['displacement'], state['max_grad'] 
-                        with torch.no_grad():
-                            d_p = p.grad
-                            if weight_decay != 0:
-                                d_p = d_p.add(p, alpha=weight_decay)
-                                hvp[i].add_(weight_decay * displacement)
-                            if momentum != 0:
-                                if 'momentum_buffer' not in state:
-                                    buf = state['momentum_buffer'] = torch.clone(d_p).detach()
-                                else:
-                                    buf = state['momentum_buffer']
-                                    buf.add_(hvp[i]).mul_(momentum).add_(d_p, alpha=1 - dampening)
-                                    if self.clip is not None:
-                                        if self.clip == 'coord':
-                                            buf.copy_(torch.minimum(torch.maximum(buf, -max_grad), max_grad))
-                                            max_grad.copy_(torch.maximum((1-dampening)/(1-momentum)*torch.abs(d_p), max_grad))
-                                        if self.clip == 'norm':
-                                            torch.nn.utils.clip_grad_norm_(buf, max_grad)
-                                            max_grad.copy_(torch.maximum((1-dampening)/(1-momentum)*torch.norm(d_p), max_grad))
-                                if nesterov:
-                                    d_p = d_p.add(buf, alpha=momentum)
-                                else:
-                                    d_p = buf
-                            displacement.copy_(-d_p * group['lr'])
-                            p.add_(displacement)
-                        i += 1
+            with torch.no_grad():
+                i = 0
+                for p in group['params']:
+                    if p.grad is None:
+                        continue
+                    state = self.state[p]
+                    displacement, max_grad = state['displacement'], state['max_grad'] 
+                    with torch.no_grad():
+                        d_p = p.grad
+                        if weight_decay != 0:
+                            d_p = d_p.add(p, alpha=weight_decay)
+                        if momentum != 0:
+                            if 'momentum_buffer' not in state:
+                                buf = state['momentum_buffer'] = torch.clone(d_p).detach()
+                            else:
+                                buf = state['momentum_buffer']
+                                buf.add_(hvp[i]).add_(displacement, alpha = weight_decay).mul_(momentum).add_(d_p, alpha=1 - dampening)
+                                if self.clip is not None:
+                                    if self.clip == 'coord':
+                                        torch.clamp_(buf, -max_grad, max_grad)
+                                        max_grad.copy_(torch.maximum((1-dampening)/(1-momentum)*torch.abs(buf), max_grad))
+                                    if self.clip == 'norm':
+                                        torch.nn.utils.clip_grad_norm_(buf, max_grad)
+                                        max_grad.copy_(torch.maximum((1-dampening)/(1-momentum)*torch.norm(buf), max_grad))
+                            if nesterov:
+                                d_p = d_p.add(buf, alpha=momentum)
+                            else:
+                                d_p = buf
+                        displacement.copy_(-d_p * group['lr'])
+                        p.add_(displacement)
+                    i += 1
                             
         return loss
