@@ -1,1 +1,1 @@
-# research
+# SGD with Hessian based momentum
