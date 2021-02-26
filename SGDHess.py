@@ -60,12 +60,7 @@ class SGDHess(Optimizer):
             for p in group['params']:
                 state = self.state[p]
                 state['displacement'] = torch.zeros_like(p)
-                state['max_grad'] = torch.zeros_like(p)
-                if self.clip == 'coord':
-                    state['max_grad'] = torch.zeros_like(p)
-                if self.clip == 'norm':
-                    state['max_grad'] = torch.zeros(1)
-
+                state['max_grad'] = torch.zeros(1, device = p.device)
     def step(self, closure=None):
         """Performs a single optimization step.
         Args:
@@ -111,17 +106,14 @@ class SGDHess(Optimizer):
                                 buf = state['momentum_buffer']
                                 buf.add_(hvp[i]).add_(displacement, alpha = weight_decay).mul_(momentum).add_(d_p, alpha=1 - dampening)
                                 if self.clip is not None:
-                                    if self.clip == 'coord':
-                                        torch.clamp_(buf, -max_grad, max_grad)
-                                        max_grad.copy_(torch.maximum((1-dampening)/(1-momentum)*torch.abs(buf), max_grad))
                                     if self.clip == 'norm':
                                         torch.nn.utils.clip_grad_norm_(buf, max_grad)
-                                        max_grad.copy_(torch.maximum((1-dampening)/(1-momentum)*torch.norm(buf), max_grad))
+                                        max_grad.copy_(torch.maximum((1-dampening)/(1-momentum)*torch.norm(d_p), max_grad))
                             if nesterov:
                                 d_p = d_p.add(buf, alpha=momentum)
                             else:
                                 d_p = buf
-                        displacement.copy_(-d_p * group['lr'])
+                        displacement.copy_(d_p).mul_(-group['lr'])
                         p.add_(displacement)
                     i += 1
                             
