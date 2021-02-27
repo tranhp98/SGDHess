@@ -41,7 +41,7 @@ class SGDHess(Optimizer):
     """
 
     def __init__(self, params, lr=1e-2, momentum=0, dampening=0,
-                 weight_decay=0, nesterov=False, clip=None):
+                 weight_decay=0, nesterov=False, clip=False):
         if lr and lr < 0.0:
             raise ValueError("Invalid learning rate: {}".format(lr))
         if momentum < 0.0:
@@ -105,10 +105,9 @@ class SGDHess(Optimizer):
                             else:
                                 buf = state['momentum_buffer']
                                 buf.add_(hvp[i]).add_(displacement, alpha = weight_decay).mul_(momentum).add_(d_p, alpha=1 - dampening)
-                                if self.clip is not None:
-                                    if self.clip == 'norm':
-                                        torch.nn.utils.clip_grad_norm_(buf, max_grad)
-                                        max_grad.copy_(torch.maximum((1-dampening)/(1-momentum)*torch.norm(d_p), max_grad))
+                                if self.clip:
+                                    torch.nn.utils.clip_grad_norm_(buf, max_grad)
+                                    max_grad.copy_(torch.maximum((1-dampening)/(1-momentum)*torch.norm(d_p), max_grad))
                             if nesterov:
                                 d_p = d_p.add(buf, alpha=momentum)
                             else:
