@@ -14,12 +14,12 @@ This Hessian-vectors product term is efficiently computed through Pytorch's auto
 hvp = torch.autograd.grad(outputs = grads, inputs = param, grad_outputs=vector)
 ```
 ## Usage
-Below is one examlple instance of SGDHess. Our recommended usage for the optimizer would be without gradient clipping since the clipping could potentially slow down the progress of the optimizer. 
+Below is one example instance of SGDHess. Our recommended usage for the optimizer would be without gradient clipping since the clipping could potentially slow down the progress of the optimizer. 
 ```python3
 from SGDHess import SGDHess
 optimizer = SGDHess(net.parameters(), lr = 0.05, momentum = 0.9, clip = False)
 ```
-To run the optimizer, we need to specify the create_graph = True when we call loss.backward(). This flag would tell autograd to construct a derivative graph, allowing us to compute higher order derivative.
+To run the optimizer, we need to specify the flag create_graph = True when we call loss.backward(). This flag would tell autograd to construct a derivative graph, allowing us to compute higher order derivative.
 ```python3
 loss.backward(create_graph = True)
 ```
