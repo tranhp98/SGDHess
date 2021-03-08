@@ -14,7 +14,7 @@ This Hessian-vectors product term is efficiently computed through Pytorch's auto
 hvp = torch.autograd.grad(outputs = grads, inputs = param, grad_outputs=vector)
 ```
 ## Usage
-Below is one example instance of SGDHess. Our recommended usage for the optimizer would be without gradient clipping since the clipping could potentially slow down the progress of the optimizer. 
+Below is one example instance of SGDHess. Our recommended usage for the optimizer would be without internal gradient clipping (setting the "clip" flag of the optimizer to False) since the internal clipping could potentially slow down the progress of the optimizer. 
 ```python3
 from SGDHess import SGDHess
 optimizer = SGDHess(net.parameters(), lr = 0.05, momentum = 0.9, clip = False)
