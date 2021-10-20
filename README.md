@@ -11,8 +11,8 @@ buf.add_(hvp[i]).add_(displacement, alpha = weight_decay).mul_(momentum).add_(d_
 ```
 This Hessian-vectors product term is efficiently computed through Pytorch's automatic differentiation package.
 ```python3
- hvp = torch.autograd.grad(outputs = grads, inputs = param, grad_outputs=vector)
-``
+hvp = torch.autograd.grad(outputs = grads, inputs = param, grad_outputs=vector)
+```
 ## Usage
 Below is one examlple instance of SGDHess. Our recommended usage for the optimizer would be without gradient clipping since the clipping could potentially slow down the progress of the optimizer. 
 ```python3
