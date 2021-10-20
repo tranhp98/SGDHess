@@ -24,5 +24,5 @@ To run the optimizer, we need to specify the flag create_graph = True when we ca
 loss.backward(create_graph = True)
 ```
 ## Experiments
-- Here we include our modified scripts for our experiments. To run the experiments, fork the orginal repo (Imagenet - https://github.com/pytorch/examples/tree/master/imagenet; Cifar10 - https://github.com/amirgholami/adahessian/tree/master/image_classification; Fairseq - https://github.com/pytorch/fairseq) follow the instruction and replace the files included with the files of the same names in the original repo.
+- Here we include our modified scripts for our experiments. To run the experiments, fork the orginal repo (Imagenet - https://github.com/pytorch/examples/tree/master/imagenet; Cifar10 - https://github.com/amirgholami/adahessian/tree/master/image_classification; Fairseq - https://github.com/pytorch/fairseq), follow the instruction and replace the files included with the files of the same names in the original repo.
 
