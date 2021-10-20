@@ -1,7 +1,7 @@
 import torch
 from torch.optim import Optimizer
 
-class SGDHess(Optimizer):
+class sgd(Optimizer):
     r"""Implements stochastic gradient descent (optionally with momentum).
     Nesterov momentum is based on the formula from
     `On the importance of initialization and momentum in deep learning`__.
@@ -54,13 +54,24 @@ class SGDHess(Optimizer):
                         weight_decay=weight_decay, nesterov=nesterov)
         if nesterov and (momentum <= 0 or dampening != 0):
             raise ValueError("Nesterov momentum requires a momentum and zero dampening")
-        super(SGDHess, self).__init__(params, defaults)
+        super(sgd, self).__init__(params, defaults)
         for group in self.param_groups:
             group.setdefault('nesterov', False)
             for p in group['params']:
                 state = self.state[p]
                 state['displacement'] = torch.zeros_like(p)
                 state['max_grad'] = torch.zeros(1, device = p.device)
+                state['current_grad'] =  torch.zeros_like(p)
+    def get_params(self):
+        param = []
+        grads = []
+        for group in self.param_groups:
+            for p in group['params']:
+                param.append(p.clone().detach())
+                grads.append(p.grad.data.clone().detach())
+        return param,grads
+    def get_param_groups(self):
+        return self.param_groups
     def step(self, closure=None):
         """Performs a single optimization step.
         Args:
@@ -87,14 +98,13 @@ class SGDHess(Optimizer):
                 grads.append(p.grad)
                 param.append(p)
 
-            hvp = torch.autograd.grad(outputs = grads, inputs = param, grad_outputs=vector)
             with torch.no_grad():
                 i = 0
                 for p in group['params']:
                     if p.grad is None:
                         continue
                     state = self.state[p]
-                    displacement, max_grad = state['displacement'], state['max_grad'] 
+                    displacement, max_grad= state['displacement'], state['max_grad']
                     with torch.no_grad():
                         d_p = p.grad
                         if weight_decay != 0:
@@ -104,7 +114,7 @@ class SGDHess(Optimizer):
                                 buf = state['momentum_buffer'] = torch.clone(d_p).detach()
                             else:
                                 buf = state['momentum_buffer']
-                                buf.add_(hvp[i]).add_(displacement, alpha = weight_decay).mul_(momentum).add_(d_p, alpha=1 - dampening)
+                                buf.add_(0).add_(displacement, alpha = weight_decay).mul_(momentum).add_(d_p, alpha=1 - dampening)
                                 if self.clip:
                                     torch.nn.utils.clip_grad_norm_(buf, max_grad)
                                     max_grad.copy_(torch.maximum((1-dampening)/(1-momentum)*torch.norm(d_p), max_grad))
@@ -117,3 +127,47 @@ class SGDHess(Optimizer):
                     i += 1
                             
         return loss
+        
+    
+            
+                
+class sgd_Snapshot(Optimizer):
+    def __init__(self, params):
+        defaults = dict()
+        super(sgd_Snapshot, self).__init__(params, defaults)
+      
+    def get_param_groups(self):
+        return self.param_groups
+    
+    def set_param_groups(self, new_params):
+        """Copies the parameters from another optimizer. 
+        """
+        for group, new_group in zip(self.param_groups, new_params): 
+            for p, q in zip(group['params'], new_group['params']):
+                p.data[:] = q.data[:]
+                  
+    def get_params(self):
+        param = []
+        grads = []
+        print("get_param is called")
+        for group in self.param_groups:
+            for p in group['params']:
+                param.append(p.clone().detach())
+                grads.append(p.grad.data.clone().detach())
+        return param,grads       
+                  
+                  
+                  
+                  
+                  
+                  
+                  
+                  
+                  
+                  
+                  
+                  
+                  
+                  
+                  
+                  
